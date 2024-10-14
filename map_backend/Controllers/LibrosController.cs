@@ -9,32 +9,33 @@ namespace map_backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
-    public class AutoresController : ControllerBase
+    public class LibrosController : ControllerBase
     {
         private readonly IConfiguration _configuration;
 
-        public AutoresController(IConfiguration configuration)
+        public LibrosController(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
-        public class Autor
+        public class Libro
         {
             public int id { get; set; }
-            public required string nombre { get; set; }
-            public required string nacionalidad { get; set; }
+            public required string titulo { get; set; }
+            public required string descripcion { get; set; }
+            public required DateTime fecha_publicacion { get; set; }
+            public required string imagen { get; set; }
         }
 
         [HttpGet]
         public async Task<IActionResult> Get()
         {
             string query = @"
-                        SELECT id, nombre, nacionalidad 
-                        FROM db_map_library.autores;
+                        SELECT id, titulo, descripcion, fecha_publicacion, imagen
+                        FROM db_map_library.libros;
                         ";
 
-            List<Autor> autores = new List<Autor>();
+            List<Libro> libros = new List<Libro>();
             string sqlDataSource = _configuration.GetConnectionString("LibraryAppConnectionString");
 
             try
@@ -49,19 +50,21 @@ namespace map_backend.Controllers
                         {
                             while (await myReader.ReadAsync())
                             {
-                                Autor autor = new Autor()
+                                Libro libro = new Libro()
                                 {
                                     id = myReader.GetInt32("id"),
-                                    nombre = myReader.GetString("nombre"),
-                                    nacionalidad = myReader.GetString("nacionalidad"),
+                                    titulo = myReader.GetString("titulo"),
+                                    descripcion = myReader.GetString("descripcion"),
+                                    fecha_publicacion = myReader.GetDateTime("fecha_publicacion"),
+                                    imagen = myReader.GetString("imagen"),
                                 };
-                                autores.Add(autor);
+                                libros.Add(libro);
                             }
                         }
                     }
                 }
 
-                return new JsonResult(autores);
+                return new JsonResult(libros);
             }
             catch (Exception ex)
             {
@@ -70,11 +73,12 @@ namespace map_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post(Autor autor)
+        [Authorize]
+        public async Task<IActionResult> Post(Libro libro)
         {
             string query = @"
-                        INSERT INTO db_map_library.autores (nombre, nacionalidad) 
-                        VALUES (@nombre, @nacionalidad);
+                        INSERT INTO db_map_library.libros (titulo, descripcion, fecha_publicacion, imagen) 
+                        VALUES (@titulo, @descripcion, @fecha_publicacion, @imagen);
                         ";
 
             string sqlDataSource = _configuration.GetConnectionString("LibraryAppConnectionString");
@@ -87,14 +91,16 @@ namespace map_backend.Controllers
 
                     using (MySqlCommand sqlCommand = new MySqlCommand(query, mySqlConnection))
                     {
-                        sqlCommand.Parameters.AddWithValue("@nombre", autor.nombre);
-                        sqlCommand.Parameters.AddWithValue("@nacionalidad", autor.nacionalidad);
+                        sqlCommand.Parameters.AddWithValue("@titulo", libro.titulo);
+                        sqlCommand.Parameters.AddWithValue("@descripcion", libro.descripcion);
+                        sqlCommand.Parameters.AddWithValue("@imagen", libro.imagen);
+                        sqlCommand.Parameters.AddWithValue("@fecha_publicacion", libro.fecha_publicacion);
 
                         await sqlCommand.ExecuteNonQueryAsync();
                     }
                 }
 
-                return new JsonResult("Autor agregado correctamente.");
+                return new JsonResult("Libro agregado correctamente.");
             }
             catch (Exception ex)
             {
@@ -103,11 +109,12 @@ namespace map_backend.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, Autor autor)
+        [Authorize]
+        public async Task<IActionResult> Put(int id, Libro libro)
         {
             string query = @"
-                        UPDATE db_map_library.autores 
-                        SET nombre = @nombre, nacionalidad = @nacionalidad
+                        UPDATE db_map_library.libros 
+                        SET titulo = @titulo, descripcion = @descripcion, fecha_publicacion = @fecha_publicacion, imagen = @imagen
                         WHERE id = @id;
                         ";
 
@@ -122,14 +129,16 @@ namespace map_backend.Controllers
                     using (MySqlCommand sqlCommand = new MySqlCommand(query, mySqlConnection))
                     {
                         sqlCommand.Parameters.AddWithValue("@id", id);
-                        sqlCommand.Parameters.AddWithValue("@nombre", autor.nombre);
-                        sqlCommand.Parameters.AddWithValue("@nacionalidad", autor.nacionalidad);
+                        sqlCommand.Parameters.AddWithValue("@titulo", libro.titulo);
+                        sqlCommand.Parameters.AddWithValue("@descripcion", libro.descripcion);
+                        sqlCommand.Parameters.AddWithValue("@fecha_publicacion", libro.fecha_publicacion);
+                        sqlCommand.Parameters.AddWithValue("@imagen", libro.imagen);
 
                         await sqlCommand.ExecuteNonQueryAsync();
                     }
                 }
 
-                return new JsonResult("Autor actualizado correctamente.");
+                return new JsonResult("Libro actualizado correctamente.");
             }
             catch (Exception ex)
             {
@@ -138,10 +147,11 @@ namespace map_backend.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize]
         public async Task<IActionResult> Delete(int id)
         {
             string query = @"
-                        DELETE FROM db_map_library.autores 
+                        DELETE FROM db_map_library.libros 
                         WHERE id = @id;
                         ";
 
@@ -161,7 +171,7 @@ namespace map_backend.Controllers
                     }
                 }
 
-                return new JsonResult("Autor eliminado correctamente.");
+                return new JsonResult("Libro eliminado correctamente.");
             }
             catch (Exception ex)
             {

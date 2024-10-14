@@ -10,31 +10,30 @@ namespace map_backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
-    public class AutoresController : ControllerBase
+    public class CategoriasController : ControllerBase
     {
         private readonly IConfiguration _configuration;
 
-        public AutoresController(IConfiguration configuration)
+        public CategoriasController(IConfiguration configuration)
         {
             _configuration = configuration;
         }
 
-        public class Autor
+        public class Categoria
         {
             public int id { get; set; }
             public required string nombre { get; set; }
-            public required string nacionalidad { get; set; }
         }
 
         [HttpGet]
         public async Task<IActionResult> Get()
         {
             string query = @"
-                        SELECT id, nombre, nacionalidad 
-                        FROM db_map_library.autores;
+                        SELECT id, nombre
+                        FROM db_map_library.categorias;
                         ";
 
-            List<Autor> autores = new List<Autor>();
+            List<Categoria> categorias = new List<Categoria>();
             string sqlDataSource = _configuration.GetConnectionString("LibraryAppConnectionString");
 
             try
@@ -49,19 +48,18 @@ namespace map_backend.Controllers
                         {
                             while (await myReader.ReadAsync())
                             {
-                                Autor autor = new Autor()
+                                Categoria categoria = new Categoria()
                                 {
                                     id = myReader.GetInt32("id"),
                                     nombre = myReader.GetString("nombre"),
-                                    nacionalidad = myReader.GetString("nacionalidad"),
                                 };
-                                autores.Add(autor);
+                                categorias.Add(categoria);
                             }
                         }
                     }
                 }
 
-                return new JsonResult(autores);
+                return new JsonResult(categorias);
             }
             catch (Exception ex)
             {
@@ -70,11 +68,11 @@ namespace map_backend.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post(Autor autor)
+        public async Task<IActionResult> Post(Categoria categoria)
         {
             string query = @"
-                        INSERT INTO db_map_library.autores (nombre, nacionalidad) 
-                        VALUES (@nombre, @nacionalidad);
+                        INSERT INTO db_map_library.categorias (nombre) 
+                        VALUES (@nombre);
                         ";
 
             string sqlDataSource = _configuration.GetConnectionString("LibraryAppConnectionString");
@@ -87,14 +85,13 @@ namespace map_backend.Controllers
 
                     using (MySqlCommand sqlCommand = new MySqlCommand(query, mySqlConnection))
                     {
-                        sqlCommand.Parameters.AddWithValue("@nombre", autor.nombre);
-                        sqlCommand.Parameters.AddWithValue("@nacionalidad", autor.nacionalidad);
+                        sqlCommand.Parameters.AddWithValue("@nombre", categoria.nombre);
 
                         await sqlCommand.ExecuteNonQueryAsync();
                     }
                 }
 
-                return new JsonResult("Autor agregado correctamente.");
+                return new JsonResult("Categoria agregado correctamente.");
             }
             catch (Exception ex)
             {
@@ -103,11 +100,11 @@ namespace map_backend.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, Autor autor)
+        public async Task<IActionResult> Put(int id, Categoria categoria)
         {
             string query = @"
-                        UPDATE db_map_library.autores 
-                        SET nombre = @nombre, nacionalidad = @nacionalidad
+                        UPDATE db_map_library.categorias 
+                        SET nombre = @nombre
                         WHERE id = @id;
                         ";
 
@@ -122,14 +119,13 @@ namespace map_backend.Controllers
                     using (MySqlCommand sqlCommand = new MySqlCommand(query, mySqlConnection))
                     {
                         sqlCommand.Parameters.AddWithValue("@id", id);
-                        sqlCommand.Parameters.AddWithValue("@nombre", autor.nombre);
-                        sqlCommand.Parameters.AddWithValue("@nacionalidad", autor.nacionalidad);
+                        sqlCommand.Parameters.AddWithValue("@nombre", categoria.nombre);
 
                         await sqlCommand.ExecuteNonQueryAsync();
                     }
                 }
 
-                return new JsonResult("Autor actualizado correctamente.");
+                return new JsonResult("Categoria actualizado correctamente.");
             }
             catch (Exception ex)
             {
@@ -141,7 +137,7 @@ namespace map_backend.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             string query = @"
-                        DELETE FROM db_map_library.autores 
+                        DELETE FROM db_map_library.categorias 
                         WHERE id = @id;
                         ";
 
@@ -161,7 +157,7 @@ namespace map_backend.Controllers
                     }
                 }
 
-                return new JsonResult("Autor eliminado correctamente.");
+                return new JsonResult("Categoria eliminado correctamente.");
             }
             catch (Exception ex)
             {

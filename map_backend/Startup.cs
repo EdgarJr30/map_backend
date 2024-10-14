@@ -13,9 +13,15 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using map_backend.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 
-namespace WebApplication1
+namespace map_backend
 {
     public class Startup
     {
@@ -26,47 +32,61 @@ namespace WebApplication1
 
         public IConfiguration Configuration { get; }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //Enable CORS
-            services.AddCors(c =>
+           
+            services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAllOrigins",
+            builder =>
             {
-                c.AddPolicy("AllowOrigin", options => options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+                builder.AllowAnyOrigin() 
+                       .AllowAnyMethod() 
+                       .AllowAnyHeader(); 
             });
+    });
 
 
             services.AddControllersWithViews().AddJsonOptions(options =>
             {
-                // Ignorar referencias cíclicas para evitar errores de serialización en bucles
                 options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
 
-                // Ignorar valores nulos en la serialización
                 options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 
-                // Usar nombres de propiedades en camelCase (por defecto en JSON)
                 options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 
-                // Opcional: Habilitar la escritura con indentación para facilitar la lectura (en desarrollo)
                 options.JsonSerializerOptions.WriteIndented = true;
             });
 
             services.AddControllers();
 
-            //JSON Serializer
-            //services.AddControllersWithViews().AddNewtonsoftJson(options =>
-            //options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore)
-            //    .AddNewtonsoftJson(options => options.SerializerSettings.ContractResolver
-            //    = new DefaultContractResolver());
+            services.AddDbContext<ApplicationDbContext>(options =>
+            options.UseMySql(Configuration.GetConnectionString("LibraryAppConnectionString"),
+            new MySqlServerVersion(new Version(8, 0, 23))));
 
-            //services.AddControllers();
+            services.AddIdentity<ApplicationUser, IdentityRole>()
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
+            var key = Encoding.ASCII.GetBytes(Configuration["Jwt:Key"]);
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(key),
+                    ValidateIssuer = false,
+                    ValidateAudience = false
+                };
+            });
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            //Enable CORS
             app.UseCors(options => options.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 
             if (env.IsDevelopment())
@@ -75,6 +95,8 @@ namespace WebApplication1
             }
 
             app.UseRouting();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
